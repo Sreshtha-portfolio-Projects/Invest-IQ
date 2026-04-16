@@ -17,6 +17,12 @@ export interface Config {
   twelveData: {
     apiKey: string;
   };
+  angel: {
+    apiKey: string;
+    clientId: string;
+    password: string;
+    totpSecret: string;
+  };
   frontendUrl: string;
 }
 
@@ -33,6 +39,12 @@ const config: Config = {
   },
   twelveData: {
     apiKey: process.env.TWELVE_DATA_API_KEY || '',
+  },
+  angel: {
+    apiKey: process.env.ANGEL_API_KEY || '',
+    clientId: process.env.ANGEL_CLIENT_ID || '',
+    password: process.env.ANGEL_PASSWORD || '',
+    totpSecret: process.env.ANGEL_TOTP_SECRET || '',
   },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 };
