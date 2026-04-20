@@ -82,18 +82,36 @@ class AngelClient {
       }
 
       const totp = this.generateTOTP(config.angel.totpSecret);
+      const sessionPin = (config.angel.mpin || config.angel.password || '').trim();
+
+      if (!sessionPin) {
+        throw new Error(
+          'Angel One login: set ANGEL_MPIN (4-digit trading PIN) or ANGEL_PASSWORD in backend/.env'
+        );
+      }
+
+      if (!config.angel.mpin && sessionPin.length > 0 && sessionPin.length !== 4) {
+        logger.warn(
+          'Angel One SmartAPI expects your 4-digit trading MPIN as the session PIN. Set ANGEL_MPIN in .env (ANGEL_PASSWORD alone is often a longer web password and will fail with "Please enter 4 digit mpin").'
+        );
+      }
 
       logger.info('Attempting Angel One login...');
 
+      // SmartAPI generateSession(clientCode, pin, totp): pin must be 4-digit MPIN for MPIN-enabled accounts.
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const loginResponse = (await this.smartApi.generateSession(
         config.angel.clientId,
-        config.angel.password,
+        sessionPin,
         totp
       )) as { status: boolean; message?: string; data: { jwtToken: string; refreshToken: string; feedToken: string } };
 
       if (!loginResponse.status) {
-        throw new Error(`Login failed: ${loginResponse.message || 'Unknown error'}`);
+        const hint =
+          /mpin/i.test(loginResponse.message || '') && !config.angel.mpin
+            ? ' Set ANGEL_MPIN to your 4-digit Angel trading app PIN in backend/.env.'
+            : '';
+        throw new Error(`Login failed: ${loginResponse.message || 'Unknown error'}${hint}`);
       }
 
       this.session = {

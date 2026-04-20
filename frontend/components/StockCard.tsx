@@ -19,7 +19,9 @@ export default function StockCard({ stock }: StockCardProps) {
           <h3 className="font-semibold text-gray-900">{stock.ticker}</h3>
           <p className="text-sm text-gray-600 truncate">{stock.name}</p>
         </div>
-        <span className={`px-2 py-1 rounded text-sm font-medium ${getChangeBgColor(stock.changePercent)}`}>
+        <span
+          className={`px-2 py-1 rounded text-sm font-medium ${getChangeBgColor(stock.changePercent)}`}
+        >
           {formatPercent(stock.changePercent)}
         </span>
       </div>

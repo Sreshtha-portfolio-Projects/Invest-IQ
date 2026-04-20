@@ -20,6 +20,9 @@ export interface Config {
   angel: {
     apiKey: string;
     clientId: string;
+    /** Trading terminal / app 4-digit MPIN (preferred for SmartAPI session). */
+    mpin: string;
+    /** Legacy name; SmartAPI often expects MPIN here — use ANGEL_MPIN when possible. */
     password: string;
     totpSecret: string;
   };
@@ -43,6 +46,7 @@ const config: Config = {
   angel: {
     apiKey: process.env.ANGEL_API_KEY || '',
     clientId: process.env.ANGEL_CLIENT_ID || '',
+    mpin: process.env.ANGEL_MPIN || '',
     password: process.env.ANGEL_PASSWORD || '',
     totpSecret: process.env.ANGEL_TOTP_SECRET || '',
   },

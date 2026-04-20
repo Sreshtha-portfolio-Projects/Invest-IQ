@@ -115,9 +115,6 @@ class MarketDataService {
     }
   }
 
-  /**
-   * Get market overview (NSE indices + trending stocks)
-   */
   async getMarketOverview(): Promise<MarketOverview> {
     try {
       const cacheKey = 'market:overview';

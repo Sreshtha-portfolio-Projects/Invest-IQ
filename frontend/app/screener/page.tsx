@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useScreenStocks } from '../../hooks/useAI';
-import { Search, Filter, TrendingUp } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import Link from 'next/link';
-import { formatCurrency, formatNumber } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/formatters';
 
 export default function ScreenerPage() {
   const [query, setQuery] = useState('');
@@ -27,7 +27,9 @@ export default function ScreenerPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Stock Screener</h1>
-        <p className="text-gray-600">Use natural language to find stocks that match your criteria</p>
+        <p className="text-gray-600">
+          Use natural language to find stocks that match your criteria
+        </p>
       </div>
 
       <div className="card mb-8">

@@ -67,16 +67,19 @@ utils/
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Configure environment variables:
+
 ```bash
 cp .env.example .env.local
 ```
 
 3. Update `.env.local`:
+
 ```
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
@@ -99,12 +102,14 @@ npm start
 ## Pages
 
 ### Dashboard (`/dashboard`)
+
 - Market indices (NIFTY, SENSEX)
 - Top gainers and losers
 - Trending stocks
 - Stock search
 
 ### Stock Detail (`/stocks/[ticker]`)
+
 - Real-time quote and price chart
 - Financial metrics and ratios
 - AI research assistant
@@ -112,36 +117,44 @@ npm start
 - Add to watchlist
 
 ### Screener (`/screener`)
+
 - Natural language query input
 - AI-powered filter interpretation
 - Results table with sorting
 
 ### Watchlist (`/watchlist`)
+
 - Saved stocks
 - Quick access to details
 - Remove stocks
 
 ### Login (`/login`)
+
 - Demo authentication
 - Entry point to app
 
 ## Components
 
 ### SearchBar
+
 Autocomplete search with dropdown results
 
 ### StockChart
+
 Interactive line chart showing price history
 
 ### AIAssistant
+
 Chat interface for asking questions about stocks with structured AI responses
 
 ### StockCard
+
 Compact display of stock with price and change
 
 ## State Management
 
 Uses React Query for:
+
 - Caching API responses
 - Automatic refetching
 - Loading and error states
@@ -150,6 +163,7 @@ Uses React Query for:
 ## Styling
 
 Tailwind CSS with custom configuration:
+
 - Primary blue color scheme
 - Success/danger colors for gains/losses
 - Responsive breakpoints

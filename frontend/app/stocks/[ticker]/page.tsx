@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStockDetails, useStockHistory } from '../../../hooks/useStocks';
-import { useResearchStock, useAnalyzeEarnings } from '../../../hooks/useAI';
+import { useAnalyzeEarnings } from '../../../hooks/useAI';
 import { useAddToWatchlist } from '../../../hooks/useWatchlist';
 import Loading from '../../../components/Loading';
 import ErrorMessage from '../../../components/ErrorMessage';
@@ -15,7 +15,7 @@ import {
   getChangeColor,
   formatNumber,
 } from '../../../utils/formatters';
-import { Star, TrendingUp, Activity, Send } from 'lucide-react';
+import { Star, TrendingUp, Activity } from 'lucide-react';
 
 export default function StockDetailPage() {
   const params = useParams();
@@ -195,9 +195,7 @@ export default function StockDetailPage() {
         <AIAssistant ticker={ticker} company={company} financials={financials} ratios={ratios} />
       )}
 
-      {activeTab === 'earnings' && (
-        <EarningsAnalysis ticker={ticker} />
-      )}
+      {activeTab === 'earnings' && <EarningsAnalysis ticker={ticker} />}
     </div>
   );
 }
@@ -241,7 +239,9 @@ function EarningsAnalysis({ ticker }: { ticker: string }) {
       {analyzeEarnings.data && (
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Quarter: {analyzeEarnings.data.quarter}</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              Quarter: {analyzeEarnings.data.quarter}
+            </h3>
             <p className="text-gray-700">{analyzeEarnings.data.summary}</p>
           </div>
 
@@ -252,7 +252,9 @@ function EarningsAnalysis({ ticker }: { ticker: string }) {
             </h3>
             <ul className="list-disc list-inside space-y-1">
               {analyzeEarnings.data.growth_signals.map((signal, i) => (
-                <li key={i} className="text-gray-700">{signal}</li>
+                <li key={i} className="text-gray-700">
+                  {signal}
+                </li>
               ))}
             </ul>
           </div>
@@ -264,7 +266,9 @@ function EarningsAnalysis({ ticker }: { ticker: string }) {
             </h3>
             <ul className="list-disc list-inside space-y-1">
               {analyzeEarnings.data.risk_signals.map((signal, i) => (
-                <li key={i} className="text-gray-700">{signal}</li>
+                <li key={i} className="text-gray-700">
+                  {signal}
+                </li>
               ))}
             </ul>
           </div>
@@ -273,20 +277,24 @@ function EarningsAnalysis({ ticker }: { ticker: string }) {
             <h3 className="font-semibold text-gray-900 mb-2">Strategic Initiatives</h3>
             <ul className="list-disc list-inside space-y-1">
               {analyzeEarnings.data.strategic_initiatives.map((initiative, i) => (
-                <li key={i} className="text-gray-700">{initiative}</li>
+                <li key={i} className="text-gray-700">
+                  {initiative}
+                </li>
               ))}
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">Management Sentiment</h3>
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-              analyzeEarnings.data.management_sentiment === 'positive'
-                ? 'bg-success/10 text-success'
-                : analyzeEarnings.data.management_sentiment === 'cautious'
-                ? 'bg-danger/10 text-danger'
-                : 'bg-gray-100 text-gray-700'
-            }`}>
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                analyzeEarnings.data.management_sentiment === 'positive'
+                  ? 'bg-success/10 text-success'
+                  : analyzeEarnings.data.management_sentiment === 'cautious'
+                    ? 'bg-danger/10 text-danger'
+                    : 'bg-gray-100 text-gray-700'
+              }`}
+            >
               {analyzeEarnings.data.management_sentiment.toUpperCase()}
             </span>
           </div>

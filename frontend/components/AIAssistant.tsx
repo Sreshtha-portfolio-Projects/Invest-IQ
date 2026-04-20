@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useResearchStock } from '../hooks/useAI';
 import { Company, Financial, FinancialRatio } from '../types/market';
 import { Send, Bot, User, TrendingUp, AlertTriangle } from 'lucide-react';
-import Loading from './Loading';
-
 interface AIAssistantProps {
   ticker: string;
   company: Company;
@@ -24,7 +22,12 @@ interface Message {
   };
 }
 
-export default function AIAssistant({ ticker, company, financials, ratios }: AIAssistantProps) {
+export default function AIAssistant({
+  ticker,
+  company,
+  financials: _financials,
+  ratios: _ratios,
+}: AIAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -59,7 +62,7 @@ export default function AIAssistant({ ticker, company, financials, ratios }: AIA
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch {
       const errorMessage: Message = {
         role: 'assistant',
         content: 'I apologize, but I encountered an error analyzing this stock. Please try again.',
@@ -83,9 +86,7 @@ export default function AIAssistant({ ticker, company, financials, ratios }: AIA
           >
             <div
               className={`max-w-[80%] rounded-lg p-4 ${
-                message.role === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                message.role === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-900'
               }`}
             >
               <div className="flex items-start mb-2">

@@ -47,34 +47,159 @@ class AngelService {
 
       try {
         const cached = await fs.readFile(this.CACHE_FILE, 'utf-8');
-        instruments = JSON.parse(cached) as AngelInstrument[];
-        logger.info('Loaded instruments from cache');
-      } catch {
-        logger.info('Downloading fresh instrument master...');
-        const response = await axios.get<AngelInstrument[]>(this.INSTRUMENTS_URL);
-        instruments = response.data;
         
-        await fs.writeFile(this.CACHE_FILE, JSON.stringify(instruments));
-        logger.info('Instrument master downloaded and cached');
-      }
-
-      this.instrumentMap.clear();
-      this.reverseMap.clear();
-
-      let nseCount = 0;
-      for (const inst of instruments) {
-        if (inst.exch_seg === 'NSE' && inst.instrumenttype === 'EQ') {
-          this.instrumentMap.set(inst.symbol, inst.token);
-          this.reverseMap.set(inst.token, inst.symbol);
-          nseCount++;
+        // Check if file is empty or not valid JSON
+        if (!cached || cached.trim() === '') {
+          throw new Error('Cache file is empty');
+        }
+        
+        const parsed = JSON.parse(cached) as unknown;
+        
+        // Validate cache has data
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          instruments = parsed as AngelInstrument[];
+          logger.info(`Loaded ${parsed.length} instruments from cache`);
+          this.populateInstrumentMaps(instruments);
+          return;
+        } else {
+          logger.info('Cache file exists but contains empty data, downloading fresh data...');
+          throw new Error('Empty cache');
+        }
+      } catch (cacheError) {
+        logger.info('Downloading fresh instrument master from Angel One...');
+        try {
+          const response = await axios.get<unknown>(this.INSTRUMENTS_URL, {
+            timeout: 30000,
+            headers: { 'User-Agent': 'Invest-IQ/1.0' },
+          });
+          
+          // Handle different response structures
+          if (Array.isArray(response.data)) {
+            instruments = response.data as AngelInstrument[];
+          } else if (
+            response.data &&
+            typeof response.data === 'object' &&
+            'data' in response.data &&
+            Array.isArray((response.data as Record<string, unknown>).data)
+          ) {
+            instruments = (response.data as Record<string, unknown>).data as AngelInstrument[];
+          }
+          
+          if (instruments.length === 0) {
+            logger.warn('Downloaded instruments array is empty, using fallback data');
+            instruments = this.getInstrumentFallback();
+          } else {
+            logger.info(`Downloaded ${instruments.length} instruments from Angel One API`);
+          }
+          
+          await fs.writeFile(this.CACHE_FILE, JSON.stringify(instruments));
+          logger.info(`Instrument master cached successfully (${instruments.length} total)`);
+        } catch (downloadError) {
+          logger.warn('Failed to download instruments from API, using fallback data', downloadError);
+          instruments = this.getInstrumentFallback();
+          // Try to cache fallback data
+          try {
+            await fs.writeFile(this.CACHE_FILE, JSON.stringify(instruments));
+          } catch {
+            // Cache write failed, continue with fallback data
+          }
         }
       }
 
-      logger.info(`Loaded ${nseCount} NSE equity instruments`);
+      this.populateInstrumentMaps(instruments);
     } catch (error) {
       logger.error('Failed to load instruments:', error);
       throw error;
     }
+  }
+
+  /**
+   * Populate instrument maps from data
+   */
+  private populateInstrumentMaps(instruments: AngelInstrument[]): void {
+    this.instrumentMap.clear();
+    this.reverseMap.clear();
+
+    let nseCount = 0;
+    let bseCount = 0;
+    let indexCount = 0;
+
+    const isStockType = (inst: AngelInstrument): boolean =>
+      inst.instrumenttype === 'EQ' || inst.instrumenttype === '' || !inst.instrumenttype;
+
+    for (const inst of instruments) {
+      // Only NSE/BSE — other segments (e.g. CDS) can reuse names like "NIFTY" and must not overwrite cash tokens
+      const isValidExchange = inst.exch_seg === 'NSE' || inst.exch_seg === 'BSE';
+      if (!isValidExchange) continue;
+
+      // Angel master lists duplicate rows (symbol NIFTY/BANKNIFTY, empty type, strike -1) alongside AMXIDX spot indices; skip so short tokens do not overwrite 99926xxx
+      if (
+        inst.exch_seg === 'NSE' &&
+        (inst.symbol === 'NIFTY' || inst.symbol === 'BANKNIFTY') &&
+        inst.instrumenttype === '' &&
+        inst.strike === '-1.000000'
+      ) {
+        continue;
+      }
+
+      // Include stocks from NSE or BSE (typically have empty instrumenttype)
+      const isStock = isStockType(inst);
+
+      // Cash indices only (do not use broad *IDX* — OPTIDX on NFO would match)
+      const isIndex = inst.instrumenttype === 'AMXIDX' || inst.instrumenttype === 'INDEX';
+
+      if (isStock || isIndex) {
+        this.instrumentMap.set(inst.symbol, inst.token);
+        this.reverseMap.set(inst.token, inst.symbol);
+
+        // Angel master uses display names like "Nifty 50" / "Nifty Bank"; app tickers match `name` (e.g. NIFTY, BANKNIFTY)
+        if (isIndex && inst.name) {
+          const nameKey = inst.name.trim().toUpperCase();
+          if (/^[A-Z][A-Z0-9]*$/.test(nameKey)) {
+            this.instrumentMap.set(nameKey, inst.token);
+          }
+        }
+
+        if (isIndex) {
+          indexCount++;
+        } else if (inst.exch_seg === 'NSE') {
+          nseCount++;
+        } else if (inst.exch_seg === 'BSE') {
+          bseCount++;
+        }
+      }
+    }
+
+    // NSE cash symbols are "RELIANCE-EQ", not "RELIANCE". Map short tickers for lookups used by the app.
+    // Second pass so NSE tokens win over BSE plain "RELIANCE" when both exist.
+    for (const inst of instruments) {
+      if (inst.exch_seg !== 'NSE' || !isStockType(inst)) continue;
+      const m = /^([A-Za-z0-9&]+)-(EQ|BE)$/i.exec(inst.symbol);
+      if (m) {
+        this.instrumentMap.set(m[1].toUpperCase(), inst.token);
+      }
+    }
+
+    logger.info(`Loaded ${nseCount} NSE + ${bseCount} BSE equity instruments + ${indexCount} indices (total: ${nseCount + bseCount + indexCount})`);
+  }
+
+  /**
+   * Get fallback instrument data for common stocks
+   */
+  private getInstrumentFallback(): AngelInstrument[] {
+    // Fallback with common stocks (BSE listings + NSE indices)
+    const fallback = [
+      { symbol: 'RELIANCE', exch_seg: 'BSE', instrumenttype: '', token: '500325', name: 'Reliance Industries', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
+      { symbol: 'TCS', exch_seg: 'BSE', instrumenttype: '', token: '532540', name: 'Tata Consultancy Services', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
+      { symbol: 'INFY', exch_seg: 'BSE', instrumenttype: '', token: '500209', name: 'Infosys Limited', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
+      { symbol: 'HDFCBANK', exch_seg: 'BSE', instrumenttype: '', token: '500180', name: 'HDFC Bank', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
+      { symbol: 'ICICIBANK', exch_seg: 'BSE', instrumenttype: '', token: '532174', name: 'ICICI Bank', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
+      { symbol: 'NIFTY', exch_seg: 'NSE', instrumenttype: 'AMXIDX', token: '99926000', name: 'Nifty 50', expiry: '', strike: '0.000000', lotsize: '1', tick_size: '0.000000' },
+      { symbol: 'BANKNIFTY', exch_seg: 'NSE', instrumenttype: 'AMXIDX', token: '99926009', name: 'Bank Nifty', expiry: '', strike: '0.000000', lotsize: '1', tick_size: '0.000000' },
+    ] as AngelInstrument[];
+    
+    logger.warn(`Using fallback instrument data with ${fallback.length} entries`);
+    return fallback;
   }
 
   /**

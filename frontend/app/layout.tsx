@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Invest IQ - AI-Powered Stock Research Platform',
   description: 'Your intelligent companion for stock market research and analysis',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

@@ -60,7 +60,8 @@ export default function LoginPage() {
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>Demo Mode:</strong> This is a demonstration app. Simply enter any email to explore the platform.
+              <strong>Demo Mode:</strong> This is a demonstration app. Simply enter any email to
+              explore the platform.
             </p>
           </div>
         </div>

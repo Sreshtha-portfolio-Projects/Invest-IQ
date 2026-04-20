@@ -36,6 +36,7 @@ export const stockService = {
 
   async getMarketOverview(): Promise<MarketOverview> {
     const response = await api.get('/stocks/overview');
-    return response.data.data;
+    const overview = response.data.data as MarketOverview;
+    return overview;
   },
 };

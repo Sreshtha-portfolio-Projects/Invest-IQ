@@ -1,6 +1,14 @@
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
 import { HistoricalPrice } from '../types/market';
 import { formatCurrency } from '../utils/formatters';
 
@@ -18,11 +26,7 @@ export default function StockChart({ data }: StockChartProps) {
     <ResponsiveContainer width="100%" height={400}>
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis
-          dataKey="date"
-          stroke="#6b7280"
-          style={{ fontSize: '12px' }}
-        />
+        <XAxis dataKey="date" stroke="#6b7280" style={{ fontSize: '12px' }} />
         <YAxis
           stroke="#6b7280"
           style={{ fontSize: '12px' }}
@@ -36,13 +40,7 @@ export default function StockChart({ data }: StockChartProps) {
           }}
           formatter={(value: number) => [formatCurrency(value), 'Price']}
         />
-        <Line
-          type="monotone"
-          dataKey="price"
-          stroke="#0ea5e9"
-          strokeWidth={2}
-          dot={false}
-        />
+        <Line type="monotone" dataKey="price" stroke="#0ea5e9" strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
   );
