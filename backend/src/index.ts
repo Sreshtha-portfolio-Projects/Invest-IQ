@@ -10,6 +10,8 @@ import logger from './utils/logger';
 import marketService from './market/marketService';
 import angelWsManager from './market/realtime/angelWsManager';
 import type { NormalizedQuote } from './types/angel.types';
+import swaggerUi from 'swagger-ui-express';
+import { buildOpenApiSpec } from './swagger';
 
 const appBase = express();
 const wsInstance = expressWs(appBase);
@@ -46,6 +48,18 @@ app.get('/', (_req: Request, res: Response) => {
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+const openApiSpec = buildOpenApiSpec({
+  title: 'Invest IQ API',
+  version: '1.0.0',
+  serverUrl: '/api',
+});
+
+app.get('/api/openapi.json', (_req: Request, res: Response) => {
+  res.json(openApiSpec);
+});
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 app.use('/api', routes);
 
