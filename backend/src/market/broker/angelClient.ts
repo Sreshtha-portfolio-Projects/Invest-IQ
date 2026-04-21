@@ -15,10 +15,11 @@ const speakeasy = require('speakeasy');
 interface SmartAPIInstance {
   generateSession: (clientId: string, password: string, totp: string) => Promise<unknown>;
   setSessionExpiryHook: (callback: () => void) => void;
-  getQuote: (params: unknown) => Promise<unknown>;
+  /** REST market snapshot (SDK name; not getQuote) */
+  marketData: (params: unknown) => Promise<unknown>;
   getCandleData: (params: unknown) => Promise<unknown>;
   getProfile: () => Promise<unknown>;
-  terminateSession: (clientId: string) => Promise<unknown>;
+  logout: (clientId: string) => Promise<unknown>;
 }
 
 interface SmartAPIResponse {
@@ -157,7 +158,7 @@ class AngelClient {
         throw new Error('SmartAPI not initialized');
       }
 
-      const response = await this.smartApi.getQuote({
+      const response = await this.smartApi.marketData({
         mode: 'FULL',
         exchangeTokens: {
           [exchange]: [symbolToken],
@@ -261,7 +262,7 @@ class AngelClient {
   async logout(): Promise<void> {
     try {
       if (this.smartApi && this.session) {
-        await this.smartApi.terminateSession(config.angel.clientId);
+        await this.smartApi.logout(config.angel.clientId);
         logger.info('Angel One session terminated');
       }
     } catch (error) {

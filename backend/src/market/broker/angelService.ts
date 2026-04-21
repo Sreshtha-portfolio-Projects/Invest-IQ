@@ -238,26 +238,60 @@ class AngelService {
       }
 
       const quoteData = await angelClient.getQuote(symbolToken, 'NSE');
-      
+
       if (!quoteData || typeof quoteData !== 'object') {
         throw new Error('Invalid quote response');
       }
 
-      const firstKey = Object.keys(quoteData)[0];
-      const data = (quoteData as Record<string, unknown>)[firstKey];
+      const raw = quoteData as Record<string, unknown>;
+      const fetched = raw.fetched;
+      let row: {
+        symboltoken: string;
+        exchange: string;
+        tradingsymbol: string;
+        ltp: number;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+        volume: number;
+      };
+
+      if (Array.isArray(fetched) && fetched.length > 0) {
+        const item = fetched[0] as Record<string, unknown>;
+        row = {
+          symboltoken: String(item.symbolToken ?? item.symboltoken ?? symbolToken),
+          exchange: String(item.exchange ?? 'NSE'),
+          tradingsymbol: String(item.tradingSymbol ?? item.tradingsymbol ?? ticker),
+          ltp: Number(item.ltp) || 0,
+          open: Number(item.open) || 0,
+          high: Number(item.high) || 0,
+          low: Number(item.low) || 0,
+          close: Number(item.close) || 0,
+          volume: Number(item.tradeVolume ?? item.volume) || 0,
+        };
+      } else {
+        const firstKey = Object.keys(raw)[0];
+        const legacy = raw[firstKey];
+        if (!legacy || typeof legacy !== 'object' || Array.isArray(legacy)) {
+          throw new Error('Invalid quote response');
+        }
+        const l = legacy as Record<string, unknown>;
+        row = {
+          symboltoken: String(l.symboltoken ?? l.symbolToken ?? symbolToken),
+          exchange: String(l.exchange ?? 'NSE'),
+          tradingsymbol: String(l.tradingsymbol ?? l.tradingSymbol ?? ticker),
+          ltp: Number(l.ltp) || 0,
+          open: Number(l.open) || 0,
+          high: Number(l.high) || 0,
+          low: Number(l.low) || 0,
+          close: Number(l.close) || 0,
+          volume: Number(l.volume ?? l.tradeVolume) || 0,
+        };
+      }
 
       const normalized = angelMapper.normalizeQuote({
-        ...data as {
-          symboltoken: string;
-          exchange: string;
-          tradingsymbol: string;
-          ltp: number;
-          open: number;
-          high: number;
-          low: number;
-          close: number;
-          volume: number;
-        },
+        ...row,
         tradingsymbol: ticker,
       });
 
