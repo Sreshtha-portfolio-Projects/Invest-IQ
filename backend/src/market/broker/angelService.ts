@@ -6,6 +6,7 @@ import angelMapper from './angelMapper';
 import marketCache from '../cache/marketCache';
 import type { NormalizedQuote, AngelInstrument } from '../../types/angel.types';
 import logger from '../../utils/logger';
+import { NotFoundError } from '../../utils/errors';
 
 /**
  * Angel One Service Layer
@@ -135,7 +136,8 @@ class AngelService {
       // Angel master lists duplicate rows (symbol NIFTY/BANKNIFTY, empty type, strike -1) alongside AMXIDX spot indices; skip so short tokens do not overwrite 99926xxx
       if (
         inst.exch_seg === 'NSE' &&
-        (inst.symbol === 'NIFTY' || inst.symbol === 'BANKNIFTY') &&
+        (inst.symbol.trim().toUpperCase() === 'NIFTY' ||
+          inst.symbol.trim().toUpperCase() === 'BANKNIFTY') &&
         inst.instrumenttype === '' &&
         inst.strike === '-1.000000'
       ) {
@@ -149,8 +151,9 @@ class AngelService {
       const isIndex = inst.instrumenttype === 'AMXIDX' || inst.instrumenttype === 'INDEX';
 
       if (isStock || isIndex) {
-        this.instrumentMap.set(inst.symbol, inst.token);
-        this.reverseMap.set(inst.token, inst.symbol);
+        const sym = inst.symbol.trim().toUpperCase();
+        this.instrumentMap.set(sym, inst.token);
+        this.reverseMap.set(inst.token, sym);
 
         // Angel master uses display names like "Nifty 50" / "Nifty Bank"; app tickers match `name` (e.g. NIFTY, BANKNIFTY)
         if (isIndex && inst.name) {
@@ -181,14 +184,29 @@ class AngelService {
     }
 
     logger.info(`Loaded ${nseCount} NSE + ${bseCount} BSE equity instruments + ${indexCount} indices (total: ${nseCount + bseCount + indexCount})`);
+
+    this.mergeEssentialSeedIfMissing();
   }
 
-  /**
-   * Get fallback instrument data for common stocks
-   */
-  private getInstrumentFallback(): AngelInstrument[] {
-    // Fallback with common stocks (BSE listings + NSE indices)
-    const fallback = [
+  /** Ensures core tickers exist if absent from the downloaded master (e.g. index token drift). */
+  private mergeEssentialSeedIfMissing(): void {
+    const added: string[] = [];
+    for (const inst of this.getSeedInstruments()) {
+      const sym = inst.symbol.trim().toUpperCase();
+      if (!this.instrumentMap.has(sym)) {
+        this.instrumentMap.set(sym, inst.token);
+        this.reverseMap.set(inst.token, sym);
+        added.push(sym);
+      }
+    }
+    if (added.length > 0) {
+      logger.info(`Merged ${added.length} seed instrument(s) missing from master: ${added.join(', ')}`);
+    }
+  }
+
+  /** Seed rows used when the master file is unavailable and to fill gaps after a normal load. */
+  private getSeedInstruments(): AngelInstrument[] {
+    return [
       { symbol: 'RELIANCE', exch_seg: 'BSE', instrumenttype: '', token: '500325', name: 'Reliance Industries', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
       { symbol: 'TCS', exch_seg: 'BSE', instrumenttype: '', token: '532540', name: 'Tata Consultancy Services', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
       { symbol: 'INFY', exch_seg: 'BSE', instrumenttype: '', token: '500209', name: 'Infosys Limited', expiry: '', strike: '-1.000000', lotsize: '1', tick_size: '5.000000' },
@@ -197,7 +215,13 @@ class AngelService {
       { symbol: 'NIFTY', exch_seg: 'NSE', instrumenttype: 'AMXIDX', token: '99926000', name: 'Nifty 50', expiry: '', strike: '0.000000', lotsize: '1', tick_size: '0.000000' },
       { symbol: 'BANKNIFTY', exch_seg: 'NSE', instrumenttype: 'AMXIDX', token: '99926009', name: 'Bank Nifty', expiry: '', strike: '0.000000', lotsize: '1', tick_size: '0.000000' },
     ] as AngelInstrument[];
-    
+  }
+
+  /**
+   * Get fallback instrument data for common stocks (master download failed).
+   */
+  private getInstrumentFallback(): AngelInstrument[] {
+    const fallback = this.getSeedInstruments();
     logger.warn(`Using fallback instrument data with ${fallback.length} entries`);
     return fallback;
   }
@@ -206,9 +230,10 @@ class AngelService {
    * Get symbol token for a ticker
    */
   getSymbolToken(ticker: string): string | null {
-    const token = this.instrumentMap.get(ticker);
+    const key = ticker.trim().toUpperCase();
+    const token = this.instrumentMap.get(key);
     if (!token) {
-      logger.warn(`Symbol token not found for ticker: ${ticker}`);
+      logger.warn(`Symbol token not found for ticker: ${key}`);
       return null;
     }
     return token;
@@ -234,7 +259,7 @@ class AngelService {
 
       const symbolToken = this.getSymbolToken(ticker);
       if (!symbolToken) {
-        throw new Error(`Symbol token not found for ticker: ${ticker}`);
+        throw new NotFoundError(`Unknown or unsupported ticker: ${ticker.trim().toUpperCase()}`);
       }
 
       const quoteData = await angelClient.getQuote(symbolToken, 'NSE');
@@ -298,7 +323,9 @@ class AngelService {
       marketCache.set(cacheKey, normalized);
       return normalized;
     } catch (error) {
-      logger.error(`Failed to get quote for ${ticker}:`, error);
+      if (!(error instanceof NotFoundError)) {
+        logger.error(`Failed to get quote for ${ticker}:`, error);
+      }
       throw error;
     }
   }
@@ -315,7 +342,7 @@ class AngelService {
     try {
       const symbolToken = this.getSymbolToken(ticker);
       if (!symbolToken) {
-        throw new Error(`Symbol token not found for ticker: ${ticker}`);
+        throw new NotFoundError(`Unknown or unsupported ticker: ${ticker.trim().toUpperCase()}`);
       }
 
       const historicalData = await angelClient.getHistorical({
@@ -328,7 +355,9 @@ class AngelService {
 
       return angelMapper.normalizeHistorical(historicalData as unknown[]);
     } catch (error) {
-      logger.error(`Failed to get historical data for ${ticker}:`, error);
+      if (!(error instanceof NotFoundError)) {
+        logger.error(`Failed to get historical data for ${ticker}:`, error);
+      }
       throw error;
     }
   }

@@ -13,7 +13,7 @@ export const researchStock = asyncHandler(async (req: Request, res: Response) =>
   const company = await databaseService.getCompanyByTicker(ticker);
 
   if (!company) {
-    throw new NotFoundError('Company not found');
+    throw new NotFoundError('Company not found in database (fundamental/AI data requires a companies row)');
   }
 
   const [financials, ratios] = await Promise.all([
@@ -137,7 +137,7 @@ export const analyzeEarnings = asyncHandler(async (req: Request, res: Response) 
   const company = await databaseService.getCompanyByTicker(ticker);
 
   if (!company) {
-    throw new NotFoundError('Company not found');
+    throw new NotFoundError('Company not found in database (fundamental/AI data requires a companies row)');
   }
 
   const earningsCall = await databaseService.getLatestEarningsCall(company.id);

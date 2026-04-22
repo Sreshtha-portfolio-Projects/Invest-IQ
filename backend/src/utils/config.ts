@@ -13,6 +13,8 @@ export interface Config {
   };
   gemini: {
     apiKey: string;
+    /** Model id for `generativelanguage.googleapis.com` (see Google AI Studio / ListModels). */
+    model: string;
   };
   twelveData: {
     apiKey: string;
@@ -39,6 +41,7 @@ const config: Config = {
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   },
   twelveData: {
     apiKey: process.env.TWELVE_DATA_API_KEY || '',

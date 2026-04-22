@@ -88,6 +88,7 @@ export function buildOpenApiSpec(params: {
           responses: {
             '200': { description: 'Quote' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Unknown ticker or no market data', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -106,6 +107,7 @@ export function buildOpenApiSpec(params: {
           responses: {
             '200': { description: 'Details' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Company not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -140,6 +142,7 @@ export function buildOpenApiSpec(params: {
           responses: {
             '200': { description: 'History' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Unknown ticker or no historical data', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -158,7 +161,9 @@ export function buildOpenApiSpec(params: {
           responses: {
             '200': { description: 'Research result' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Company not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '429': { description: 'Rate limited' },
+            '502': { description: 'Upstream AI error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -178,6 +183,7 @@ export function buildOpenApiSpec(params: {
             '200': { description: 'Screener result' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '429': { description: 'Rate limited' },
+            '502': { description: 'Upstream AI error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -196,7 +202,9 @@ export function buildOpenApiSpec(params: {
           responses: {
             '200': { description: 'Earnings analysis' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Company not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '429': { description: 'Rate limited' },
+            '502': { description: 'Upstream AI error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -223,9 +231,11 @@ export function buildOpenApiSpec(params: {
             },
           },
           responses: {
-            '200': { description: 'Added' },
+            '200': { description: 'Added (idempotent path may return 200)' },
+            '201': { description: 'Created' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '401': { description: 'Unauthorized' },
+            '404': { description: 'Company not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },
@@ -241,6 +251,7 @@ export function buildOpenApiSpec(params: {
             '200': { description: 'Removed' },
             '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '401': { description: 'Unauthorized' },
+            '404': { description: 'Watchlist or item not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

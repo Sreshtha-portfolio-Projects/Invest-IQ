@@ -36,7 +36,7 @@ export const addToWatchlist = asyncHandler(async (req: Request, res: Response) =
   const company = await databaseService.getCompanyByTicker(ticker);
 
   if (!company) {
-    throw new NotFoundError('Company not found');
+    throw new NotFoundError('Company not found in database');
   }
 
   try {

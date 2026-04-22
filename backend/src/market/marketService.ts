@@ -8,6 +8,7 @@ import type {
   MarketOverview,
 } from '../types/market.types';
 import logger from '../utils/logger';
+import { NotFoundError } from '../utils/errors';
 
 /**
  * Market Data Service (Angel One Primary)
@@ -29,6 +30,13 @@ class MarketDataService {
     } catch (error) {
       logger.error('Failed to initialize market data service:', error);
       throw error;
+    }
+  }
+
+  /** Ensures instrument master is loaded (tests use `createApp()` without `index.ts` startup). */
+  private async ensureReady(): Promise<void> {
+    if (!this.isInitialized) {
+      await this.initialize();
     }
   }
 
@@ -56,6 +64,7 @@ class MarketDataService {
    */
   async searchStocks(query: string): Promise<StockSearchResult[]> {
     try {
+      await this.ensureReady();
       const results = angelService.searchStocks(query, 20);
       return results.map((r) => ({
         ticker: r.ticker,
@@ -74,10 +83,13 @@ class MarketDataService {
    */
   async getStockQuote(ticker: string): Promise<StockQuote> {
     try {
+      await this.ensureReady();
       const normalized = await angelService.getStockQuote(ticker);
       return this.convertToStockQuote(normalized);
     } catch (error) {
-      logger.error(`Failed to get quote for ${ticker}:`, error);
+      if (!(error instanceof NotFoundError)) {
+        logger.error(`Failed to get quote for ${ticker}:`, error);
+      }
       throw error;
     }
   }
@@ -91,6 +103,7 @@ class MarketDataService {
     endDate?: string
   ): Promise<HistoricalPrice[]> {
     try {
+      await this.ensureReady();
       const fromDate = startDate || this.getDateDaysAgo(365);
       const toDate = endDate || this.getTodayDate();
 
@@ -110,13 +123,16 @@ class MarketDataService {
         volume: d.volume,
       }));
     } catch (error) {
-      logger.error(`Failed to get historical prices for ${ticker}:`, error);
+      if (!(error instanceof NotFoundError)) {
+        logger.error(`Failed to get historical prices for ${ticker}:`, error);
+      }
       throw error;
     }
   }
 
   async getMarketOverview(): Promise<MarketOverview> {
     try {
+      await this.ensureReady();
       const cacheKey = 'market:overview';
       const cached = marketCache.get<MarketOverview>(cacheKey);
       if (cached) {

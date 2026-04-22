@@ -35,22 +35,57 @@ export class DatabaseService {
     return getSupabaseClient();
   }
 
+  /**
+   * Resolve company by ticker. Accepts NSE-style symbols (`RELIANCE`) and Yahoo-style (`RELIANCE.NS`)
+   * so Angel/market tickers match seeded `companies` rows.
+   */
   async getCompanyByTicker(ticker: string): Promise<Company | null> {
     try {
-      const { data, error } = await this.supabase
-        .from('companies')
-        .select('*')
-        .eq('ticker', ticker)
-        .single();
+      const raw = ticker.trim();
+      if (!raw) {
+        return null;
+      }
+      const upper = raw.toUpperCase();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null;
+      const candidates: string[] = [];
+      const add = (s: string): void => {
+        if (s && !candidates.includes(s)) {
+          candidates.push(s);
         }
-        throw error;
+      };
+      add(raw);
+      add(upper);
+      if (!upper.includes('.')) {
+        add(`${upper}.NS`);
+        add(`${upper}.BO`);
       }
 
-      return data;
+      const { data, error } = await this.supabase.from('companies').select('*').in('ticker', candidates);
+
+      if (error) {
+        throw error;
+      }
+      if (!data?.length) {
+        return null;
+      }
+      if (data.length === 1) {
+        return data[0];
+      }
+
+      const rank = (sym: string): number => {
+        if (sym === raw || sym === upper) {
+          return 0;
+        }
+        if (sym === `${upper}.NS`) {
+          return 1;
+        }
+        if (sym === `${upper}.BO`) {
+          return 2;
+        }
+        return 3;
+      };
+
+      return [...data].sort((a, b) => rank(a.ticker) - rank(b.ticker))[0];
     } catch (error) {
       logger.error(`Error fetching company by ticker ${ticker}:`, error);
       throw error;

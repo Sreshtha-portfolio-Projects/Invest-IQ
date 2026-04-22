@@ -55,7 +55,7 @@ export const getStockDetails = asyncHandler(async (req: Request, res: Response) 
   let company = await databaseService.getCompanyByTicker(ticker);
 
   if (!company) {
-    throw new NotFoundError('Company not found');
+    throw new NotFoundError('Company not found in database (try NSE ticker, e.g. RELIANCE, or Yahoo form RELIANCE.NS)');
   }
 
   const [quote, financials, ratios] = await Promise.all([
